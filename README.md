@@ -1,1 +1,1 @@
-# comp_theory
+Exercices from book on computation theory written in Kotlin
