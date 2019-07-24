@@ -6,7 +6,7 @@ sealed class SimType {
         }
     }
 
-    open fun reduce(): SimType {
+    open fun reduce(env: Map<String, SimType>): SimType {
         return this
     }
 
@@ -33,10 +33,10 @@ class AddSim(left: SimType, right: SimType) : SimType() {
         return "$left + $right"
     }
 
-    override fun reduce(): SimType {
+    override fun reduce(env: Map<String, SimType>): SimType {
         return when {
-            left.isReducible() -> AddSim(left.reduce(), right)
-            right.isReducible() -> AddSim(left, right.reduce())
+            left.isReducible() -> AddSim(left.reduce(env), right)
+            right.isReducible() -> AddSim(left, right.reduce(env))
             else -> NumberSim(left.value() + right.value())
         }
     }
@@ -49,19 +49,31 @@ class MultiplySim(left: SimType, right: SimType) : SimType() {
         return "$left * $right"
     }
 
-    override fun reduce(): SimType {
+    override fun reduce(env: Map<String, SimType>): SimType {
         return when {
-            left.isReducible() -> MultiplySim(left.reduce(), right)
-            right.isReducible() -> MultiplySim(left, right.reduce())
+            left.isReducible() -> MultiplySim(left.reduce(env), right)
+            right.isReducible() -> MultiplySim(left, right.reduce(env))
             else -> NumberSim(left.value() * right.value())
         }
     }
 }
 
-class Machine(expr: SimType) {
+class Variable(name: String) :SimType() {
+    private val name = name
+    override fun toString(): String {
+        return "$name"
+    }
+
+    override fun reduce(env: Map<String, SimType>): SimType {
+        return env[name] ?: error("$name is not available in environment")
+    }
+}
+
+class Machine(expr: SimType, env: Map<String, SimType>) {
     private var expr = expr
+    private val env = env
     private fun step() {
-        expr = expr.reduce()
+        expr = expr.reduce(env)
     }
 
     fun run() {
@@ -74,10 +86,8 @@ class Machine(expr: SimType) {
 }
 
 fun main() {
-    val testExpr: SimType = AddSim(
-        MultiplySim(NumberSim(1), NumberSim(2)),
-        MultiplySim(NumberSim(3), NumberSim(4))
-    )
-    val vm = Machine(testExpr)
+    val testExpr = AddSim(Variable("x"), Variable("y"))
+    val environment = mapOf("x" to NumberSim(3), "y" to NumberSim(4))
+    val vm = Machine(testExpr, environment)
     vm.run()
 }
