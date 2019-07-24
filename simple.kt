@@ -1,7 +1,18 @@
-abstract class SimType {
-    abstract fun isReducible(): Boolean
-    abstract fun reduce(): SimType
-    abstract fun value(): Int
+sealed class SimType {
+    fun isReducible(): Boolean {
+        return when (this) {
+            is NumberSim -> false
+            else -> true
+        }
+    }
+
+    open fun reduce(): SimType {
+        return this
+    }
+
+    open fun value(): Int {
+        throw UnsupportedOperationException()
+    }
 }
 
 class NumberSim(value: Int) : SimType() {
@@ -13,14 +24,6 @@ class NumberSim(value: Int) : SimType() {
     override fun value(): Int {
         return value
     }
-
-    override fun reduce(): SimType {
-        return this
-    }
-
-    override fun isReducible(): Boolean {
-        return false
-    }
 }
 
 class AddSim(left: SimType, right: SimType) : SimType() {
@@ -28,14 +31,6 @@ class AddSim(left: SimType, right: SimType) : SimType() {
     private val right = right
     override fun toString(): String {
         return "$left + $right"
-    }
-
-    override fun value(): Int {
-        return 0
-    }
-
-    override fun isReducible(): Boolean {
-        return true
     }
 
     override fun reduce(): SimType {
@@ -54,14 +49,6 @@ class MultiplySim(left: SimType, right: SimType) : SimType() {
         return "$left * $right"
     }
 
-    override fun value(): Int {
-        return 0
-    }
-
-    override fun isReducible(): Boolean {
-        return true
-    }
-
     override fun reduce(): SimType {
         return when {
             left.isReducible() -> MultiplySim(left.reduce(), right)
@@ -71,12 +58,26 @@ class MultiplySim(left: SimType, right: SimType) : SimType() {
     }
 }
 
-fun main() {
-    var addSim : SimType = AddSim(MultiplySim(NumberSim(1), NumberSim(2)),
-        MultiplySim(NumberSim(3), NumberSim(4)))
-    while (addSim.isReducible()) {
-        println(addSim)
-        println(addSim.isReducible())
-        addSim = addSim.reduce()
+class Machine(expr: SimType) {
+    private var expr = expr
+    private fun step() {
+        expr = expr.reduce()
     }
+
+    fun run() {
+        while (expr.isReducible()) {
+            println(expr)
+            step()
+        }
+        println(expr)
+    }
+}
+
+fun main() {
+    val testExpr: SimType = AddSim(
+        MultiplySim(NumberSim(1), NumberSim(2)),
+        MultiplySim(NumberSim(3), NumberSim(4))
+    )
+    val vm = Machine(testExpr)
+    vm.run()
 }
