@@ -2,6 +2,7 @@ sealed class SimType {
     fun isReducible(): Boolean {
         return when (this) {
             is NumberSim -> false
+            is BoolSim -> false
             is DoNothing -> false
             else -> true
         }
@@ -14,6 +15,10 @@ sealed class SimType {
     open fun value(): Int {
         throw UnsupportedOperationException()
     }
+
+    open fun boolValue(): Boolean {
+        throw UnsupportedOperationException()
+    }
 }
 
 class NumberSim(value: Int) : SimType() {
@@ -23,6 +28,31 @@ class NumberSim(value: Int) : SimType() {
     }
 
     override fun value(): Int {
+        return value
+    }
+
+    override fun boolValue(): Boolean {
+        return when (value) {
+            0 -> false
+            else -> true
+        }
+    }
+}
+
+class BoolSim(value: Boolean) : SimType() {
+    private val value = value
+    override fun toString(): String {
+        return "$value"
+    }
+
+    override fun value(): Int {
+        return when (value) {
+            false -> 0
+            true -> 1
+        }
+    }
+
+    override fun boolValue(): Boolean {
         return value
     }
 }
@@ -55,6 +85,22 @@ class MultiplySim(left: SimType, right: SimType) : SimType() {
             left.isReducible() -> Pair(MultiplySim(left.reduce(env).first, right), env)
             right.isReducible() -> Pair(MultiplySim(left, right.reduce(env).first), env)
             else -> Pair(NumberSim(left.value() * right.value()), env)
+        }
+    }
+}
+
+class LessSim(left: SimType, right: SimType) : SimType() {
+    private val left = left
+    private val right = right
+    override fun toString(): String {
+        return "$left < $right"
+    }
+
+    override fun reduce(env: Map<String, SimType>): Pair<SimType, Map<String, SimType>> {
+        return when {
+            left.isReducible() -> Pair(LessSim(left.reduce(env).first, right), env)
+            right.isReducible() -> Pair(LessSim(left, right.reduce(env).first), env)
+            else -> Pair(BoolSim(left.value() < right.value()), env)
         }
     }
 }
@@ -100,6 +146,26 @@ class Assign(name: String, expr: SimType) : SimType() {
     }
 }
 
+class If(condition: SimType, consequence: SimType, alternative: SimType) : SimType() {
+    private val cond = condition
+    private val conseq = consequence
+    private val alt = alternative
+    override fun toString(): String {
+        return "if $cond then $conseq else $alt"
+    }
+
+    override fun reduce(env: Map<String, SimType>): Pair<SimType, Map<String, SimType>> {
+        return if (cond.isReducible()) {
+            Pair(If(cond.reduce(env).first, conseq, alt), env)
+        } else {
+            when {
+                cond.boolValue() -> Pair(conseq, env)
+                else -> Pair(alt, env)
+            }
+        }
+    }
+}
+
 class Machine(expr: SimType, env: Map<String, SimType>) {
     private var expr = expr
     private var env = env
@@ -131,4 +197,11 @@ fun main() {
     val environment2 = mutableMapOf("x" to NumberSim(2))
     val vm2 = Machine(testExpr2, environment2)
     vm2.run()
+
+    println()
+    val testExpr3 = If(Variable("x"),
+        Assign("y", NumberSim(1)), Assign("y", NumberSim(2)))
+    val environment3 = mutableMapOf("x" to NumberSim(0))
+    val vm3 = Machine(testExpr3, environment3)
+    vm3.run()
 }
