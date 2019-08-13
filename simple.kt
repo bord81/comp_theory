@@ -73,6 +73,22 @@ class AddSim(left: SimType, right: SimType) : SimType() {
     }
 }
 
+class SubtractSim(left: SimType, right: SimType) : SimType() {
+    private val left = left
+    private val right = right
+    override fun toString(): String {
+        return "$left - $right"
+    }
+
+    override fun reduce(env: Map<String, SimType>): Pair<SimType, Map<String, SimType>> {
+        return when {
+            left.isReducible() -> Pair(SubtractSim(left.reduce(env).first, right), env)
+            right.isReducible() -> Pair(SubtractSim(left, right.reduce(env).first), env)
+            else -> Pair(NumberSim(left.value() - right.value()), env)
+        }
+    }
+}
+
 class MultiplySim(left: SimType, right: SimType) : SimType() {
     private val left = left
     private val right = right
@@ -85,6 +101,22 @@ class MultiplySim(left: SimType, right: SimType) : SimType() {
             left.isReducible() -> Pair(MultiplySim(left.reduce(env).first, right), env)
             right.isReducible() -> Pair(MultiplySim(left, right.reduce(env).first), env)
             else -> Pair(NumberSim(left.value() * right.value()), env)
+        }
+    }
+}
+
+class DivideSim(left: SimType, right: SimType) : SimType() {
+    private val left = left
+    private val right = right
+    override fun toString(): String {
+        return "$left / $right"
+    }
+
+    override fun reduce(env: Map<String, SimType>): Pair<SimType, Map<String, SimType>> {
+        return when {
+            left.isReducible() -> Pair(DivideSim(left.reduce(env).first, right), env)
+            right.isReducible() -> Pair(DivideSim(left, right.reduce(env).first), env)
+            else -> Pair(NumberSim(left.value() / right.value()), env)
         }
     }
 }
@@ -104,6 +136,39 @@ class LessSim(left: SimType, right: SimType) : SimType() {
         }
     }
 }
+
+class MoreSim(left: SimType, right: SimType) : SimType() {
+    private val left = left
+    private val right = right
+    override fun toString(): String {
+        return "$left > $right"
+    }
+
+    override fun reduce(env: Map<String, SimType>): Pair<SimType, Map<String, SimType>> {
+        return when {
+            left.isReducible() -> Pair(MoreSim(left.reduce(env).first, right), env)
+            right.isReducible() -> Pair(MoreSim(left, right.reduce(env).first), env)
+            else -> Pair(BoolSim(left.value() > right.value()), env)
+        }
+    }
+}
+
+class EqualsSim(left: SimType, right: SimType) : SimType() {
+    private val left = left
+    private val right = right
+    override fun toString(): String {
+        return "$left == $right"
+    }
+
+    override fun reduce(env: Map<String, SimType>): Pair<SimType, Map<String, SimType>> {
+        return when {
+            left.isReducible() -> Pair(EqualsSim(left.reduce(env).first, right), env)
+            right.isReducible() -> Pair(EqualsSim(left, right.reduce(env).first), env)
+            else -> Pair(BoolSim(left.value() == right.value()), env)
+        }
+    }
+}
+
 
 class Variable(name: String) : SimType() {
     private val name = name
@@ -166,6 +231,35 @@ class If(condition: SimType, consequence: SimType, alternative: SimType) : SimTy
     }
 }
 
+class Sequence(first: SimType, second: SimType) : SimType() {
+    private val first = first
+    private val second = second
+    override fun toString(): String {
+        return "$first; $second;"
+    }
+
+    override fun reduce(env: Map<String, SimType>): Pair<SimType, Map<String, SimType>> {
+        return if (first is DoNothing) {
+            Pair(second, env)
+        } else {
+            val reduced = first.reduce(env)
+            Pair(Sequence(reduced.first, second), reduced.second)
+        }
+    }
+}
+
+class While(condition: SimType, body: SimType) : SimType() {
+    private val cond = condition
+    private val body = body
+    override fun toString(): String {
+        return "while($cond) {$body}"
+    }
+
+    override fun reduce(env: Map<String, SimType>): Pair<SimType, Map<String, SimType>> {
+        return Pair(If(cond, Sequence(body, this), DoNothing()), env)
+    }
+}
+
 class Machine(expr: SimType, env: Map<String, SimType>) {
     private var expr = expr
     private var env = env
@@ -199,9 +293,25 @@ fun main() {
     vm2.run()
 
     println()
-    val testExpr3 = If(Variable("x"),
-        Assign("y", NumberSim(1)), Assign("y", NumberSim(2)))
+    val testExpr3 = If(
+        Variable("x"),
+        Assign("y", NumberSim(1)), Assign("y", NumberSim(2))
+    )
     val environment3 = mutableMapOf("x" to NumberSim(0))
     val vm3 = Machine(testExpr3, environment3)
     vm3.run()
+
+    println()
+    val testExpr4 = Sequence(Assign("x", AddSim(NumberSim(1), NumberSim(1))),
+        Assign("y", AddSim(Variable("x"), NumberSim(3))))
+    val environment4 = emptyMap<String, SimType>().toMutableMap()
+    val vm4 = Machine(testExpr4, environment4)
+    vm4.run()
+
+    println()
+    val testExpr5 = While(LessSim(Variable("x"), NumberSim(5)),
+        Assign("x", MultiplySim(Variable("x"), NumberSim(3))))
+    val environment5 = mutableMapOf("x" to NumberSim(1))
+    val vm5 = Machine(testExpr5, environment5)
+    vm5.run()
 }
