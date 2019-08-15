@@ -1,4 +1,7 @@
-sealed class SimType {
+package comp_theory
+
+/* Simple language using small step semantics */
+private sealed class SimType {
     fun isReducible(): Boolean {
         return when (this) {
             is NumberSim -> false
@@ -21,7 +24,7 @@ sealed class SimType {
     }
 }
 
-class NumberSim(value: Int) : SimType() {
+private class NumberSim(value: Int) : SimType() {
     private val value = value
     override fun toString(): String {
         return "$value"
@@ -39,7 +42,7 @@ class NumberSim(value: Int) : SimType() {
     }
 }
 
-class BoolSim(value: Boolean) : SimType() {
+private class BoolSim(value: Boolean) : SimType() {
     private val value = value
     override fun toString(): String {
         return "$value"
@@ -57,7 +60,7 @@ class BoolSim(value: Boolean) : SimType() {
     }
 }
 
-class AddSim(left: SimType, right: SimType) : SimType() {
+private class AddSim(left: SimType, right: SimType) : SimType() {
     private val left = left
     private val right = right
     override fun toString(): String {
@@ -73,7 +76,7 @@ class AddSim(left: SimType, right: SimType) : SimType() {
     }
 }
 
-class SubtractSim(left: SimType, right: SimType) : SimType() {
+private class SubtractSim(left: SimType, right: SimType) : SimType() {
     private val left = left
     private val right = right
     override fun toString(): String {
@@ -89,7 +92,7 @@ class SubtractSim(left: SimType, right: SimType) : SimType() {
     }
 }
 
-class MultiplySim(left: SimType, right: SimType) : SimType() {
+private class MultiplySim(left: SimType, right: SimType) : SimType() {
     private val left = left
     private val right = right
     override fun toString(): String {
@@ -105,7 +108,7 @@ class MultiplySim(left: SimType, right: SimType) : SimType() {
     }
 }
 
-class DivideSim(left: SimType, right: SimType) : SimType() {
+private class DivideSim(left: SimType, right: SimType) : SimType() {
     private val left = left
     private val right = right
     override fun toString(): String {
@@ -121,7 +124,7 @@ class DivideSim(left: SimType, right: SimType) : SimType() {
     }
 }
 
-class LessSim(left: SimType, right: SimType) : SimType() {
+private class LessSim(left: SimType, right: SimType) : SimType() {
     private val left = left
     private val right = right
     override fun toString(): String {
@@ -137,7 +140,7 @@ class LessSim(left: SimType, right: SimType) : SimType() {
     }
 }
 
-class MoreSim(left: SimType, right: SimType) : SimType() {
+private class MoreSim(left: SimType, right: SimType) : SimType() {
     private val left = left
     private val right = right
     override fun toString(): String {
@@ -153,7 +156,7 @@ class MoreSim(left: SimType, right: SimType) : SimType() {
     }
 }
 
-class EqualsSim(left: SimType, right: SimType) : SimType() {
+private class EqualsSim(left: SimType, right: SimType) : SimType() {
     private val left = left
     private val right = right
     override fun toString(): String {
@@ -170,7 +173,7 @@ class EqualsSim(left: SimType, right: SimType) : SimType() {
 }
 
 
-class Variable(name: String) : SimType() {
+private class Variable(name: String) : SimType() {
     private val name = name
     override fun toString(): String {
         return "$name"
@@ -183,7 +186,7 @@ class Variable(name: String) : SimType() {
     }
 }
 
-class DoNothing : SimType() {
+private class DoNothing : SimType() {
     override fun toString(): String {
         return "do-nothing"
     }
@@ -193,7 +196,7 @@ class DoNothing : SimType() {
     }
 }
 
-class Assign(name: String, expr: SimType) : SimType() {
+private class Assign(name: String, expr: SimType) : SimType() {
     private val name = name
     private val expr = expr
     override fun toString(): String {
@@ -211,7 +214,7 @@ class Assign(name: String, expr: SimType) : SimType() {
     }
 }
 
-class If(condition: SimType, consequence: SimType, alternative: SimType) : SimType() {
+private class If(condition: SimType, consequence: SimType, alternative: SimType) : SimType() {
     private val cond = condition
     private val conseq = consequence
     private val alt = alternative
@@ -231,7 +234,7 @@ class If(condition: SimType, consequence: SimType, alternative: SimType) : SimTy
     }
 }
 
-class Sequence(first: SimType, second: SimType) : SimType() {
+private class Sequence(first: SimType, second: SimType) : SimType() {
     private val first = first
     private val second = second
     override fun toString(): String {
@@ -248,7 +251,7 @@ class Sequence(first: SimType, second: SimType) : SimType() {
     }
 }
 
-class While(condition: SimType, body: SimType) : SimType() {
+private class While(condition: SimType, body: SimType) : SimType() {
     private val cond = condition
     private val body = body
     override fun toString(): String {
@@ -260,7 +263,7 @@ class While(condition: SimType, body: SimType) : SimType() {
     }
 }
 
-class Machine(expr: SimType, env: Map<String, SimType>) {
+private class Machine(expr: SimType, env: Map<String, SimType>) {
     private var expr = expr
     private var env = env
     private fun step() {
@@ -302,15 +305,19 @@ fun main() {
     vm3.run()
 
     println()
-    val testExpr4 = Sequence(Assign("x", AddSim(NumberSim(1), NumberSim(1))),
-        Assign("y", AddSim(Variable("x"), NumberSim(3))))
+    val testExpr4 = Sequence(
+        Assign("x", AddSim(NumberSim(1), NumberSim(1))),
+        Assign("y", AddSim(Variable("x"), NumberSim(3)))
+    )
     val environment4 = emptyMap<String, SimType>().toMutableMap()
     val vm4 = Machine(testExpr4, environment4)
     vm4.run()
 
     println()
-    val testExpr5 = While(LessSim(Variable("x"), NumberSim(5)),
-        Assign("x", MultiplySim(Variable("x"), NumberSim(3))))
+    val testExpr5 = While(
+        LessSim(Variable("x"), NumberSim(5)),
+        Assign("x", MultiplySim(Variable("x"), NumberSim(3)))
+    )
     val environment5 = mutableMapOf("x" to NumberSim(1))
     val vm5 = Machine(testExpr5, environment5)
     vm5.run()
